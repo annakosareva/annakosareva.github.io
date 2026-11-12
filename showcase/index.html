@@ -67,7 +67,9 @@
   /* ---------- top bar ---------- */
   .top { border-bottom: 1px solid var(--line); }
   .top .wrap { display: flex; justify-content: space-between; gap: 16px; padding-block: 16px; flex-wrap: wrap; }
-  .top strong { font-weight: 700; letter-spacing: -.01em; }
+  .top strong { font-weight: 700; letter-spacing: -.01em; margin-left: auto; }
+  .top .back { color: var(--ink); font-weight: 600; font-size: .95rem; text-decoration: none; }
+  .top .back:hover { text-decoration: underline; text-underline-offset: 4px; }
   .top span { color: var(--ink-faint); font-size: .95rem; }
 
   /* ---------- video: Alex's experience ---------- */
@@ -562,6 +564,7 @@
 
 <div class="top">
   <div class="wrap">
+    <a class="back" href="../">← Back to portfolio</a>
     <strong>Outcome vs. Workflow</strong>
     <span>Design study by Anna Kosareva, November 2026</span>
   </div>
