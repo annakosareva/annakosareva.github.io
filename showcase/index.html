@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Outcome vs. Workflow: design study</title>
-<meta name="description" content="Two ways to build IT access support: a form-driven workflow (AI automation) and an outcome-driven agent (AI-native). Flows, trade-offs and guardrails side by side.">
+<meta name="description" content="Two ways to build IT access support: a form-driven workflow (AI automation) and an outcome-driven agent (AI-native). Flows and trade-offs side by side.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -956,54 +956,6 @@
       <p class="lede">Cost in a model-based system is roughly the number of calls times the tokens in each call. These counts come from the scenario steps, not from recorded runs. They are expected, not measured.</p>
       <div class="calls" id="calls" role="table" aria-label="Model calls per scenario"></div>
       <p class="calls-note"><b>Per call:</b> AI automation makes no model calls: the form and workflow are plain automation. The AI-native calls each carry the instructions, the tool list and the policy data, so each one is large. Expect AI-native to cost more in model tokens on every request. Where it saves is people’s time and wasted approvals. Real numbers will come from the logs of the recorded runs.</p>
-    </div>
-  </section>
-
-  <!-- ================= GUARDRAILS ================= -->
-  <section class="section" id="guardrails">
-    <div class="wrap">
-      <h2>The model proposes. Code decides.</h2>
-      <p class="lede">The comparison is only fair if both versions sit on the same ground. They share the controls and differ in how the work is chosen.</p>
-
-      <div class="split">
-        <div class="panel">
-          <h3>Shared by both versions</h3>
-          <ul>
-            <li><b>Policy.</b> One approval matrix and one approver resolution.</li>
-            <li><b>Enforcement.</b> The identity provider checks the approval before any grant.</li>
-            <li><b>Audit.</b> An append-only log with a correlation ID per run.</li>
-            <li><b>Approval.</b> The same email with Approve and Reject buttons.</li>
-            <li><b>Inputs.</b> The same request, seed and approver in every scenario.</li>
-          </ul>
-        </div>
-        <div class="panel">
-          <h3>What differs</h3>
-          <ul>
-            <li><b>What decides the work.</b> The form’s template and workflow, or policy, state and desired outcome.</li>
-            <li><b>Where required information lives.</b> The form’s template, or the policy defaults.</li>
-            <li><b>Who keeps it current.</b> The support team updates forms and templates by hand when the policy changes, or the agent reads the policy directly.</li>
-            <li><b>How Alex is told.</b> Notifications in fixed wording, or messages in the chat.</li>
-          </ul>
-        </div>
-      </div>
-
-      <h3 class="sub">Every call in AI-native passes four gates</h3>
-      <div class="gates">
-        <div class="gate gate--model"><h4>Model</h4><p>Reads, checks and asks. Each tick is a fresh call seeded with the saved request, never a transcript.</p></div>
-        <div class="gate"><h4>Orchestrator</h4><p>Validates and audits every call and sets status from results, never from model text. It hands a clean request to the workflow.</p></div>
-        <div class="gate"><h4>Tools</h4><p>A few narrow, typed tools. Policy arrives as data, never as raw Confluence text.</p></div>
-        <div class="gate gate--idp"><h4>Identity provider</h4><p>Independently checks the approval before any grant. The same check runs for AI automation.</p></div>
-      </div>
-      <p class="denied">If any gate says no, nothing changes.<span>The model receives a structured error and the attempt is audited as denied.</span></p>
-
-      <h3 class="sub">The model reads and asks. The workflow acts.</h3>
-      <div class="loop">
-        <div class="loop-cell"><h4>Observe</h4><p>Model: what does Alex have, is anything open, is the system healthy?</p><code>get_user_access<br>find_open_requests<br>get_system_status</code></div>
-        <div class="loop-cell"><h4>Decide</h4><p>Model: what does the policy require, and what is still missing?</p><code>get_access_policy<br>get_approval_status</code></div>
-        <div class="loop-cell"><h4>Act</h4><p>Workflow: ask for approval, tell Alex and grant. The model doesn’t choose these.</p><code>request_approval<br>notify_user<br>grant_access</code></div>
-        <div class="loop-cell"><h4>Verify</h4><p>Workflow: test access before saying it’s ready.</p><code>get_user_access</code></div>
-      </div>
-      <p class="loop-foot">The model’s part ends once nothing is missing. The workflow runs until the outcome is verified, it is waiting on a person, or a failure needs intervention. A new message or an approval decision starts the next tick.</p>
     </div>
   </section>
 

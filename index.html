@@ -98,8 +98,10 @@
   .eyebrow { display: flex; align-items: center; gap: 18px; margin: 0; font-size: .8rem; font-weight: 700; letter-spacing: .3em; text-transform: uppercase; }
   .eyebrow::after { content: ""; width: 44px; border-top: 1px solid var(--ink-soft); }
   .project { padding: 36px 0 52px; }
-  .project-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, .95fr) minmax(0, 1.5fr); gap: 0; margin-top: 22px; align-items: center; }
-  .project h2 { position: relative; margin: 0; padding-bottom: 34px; font-size: clamp(2.1rem, 3.6vw, 2.9rem); font-weight: 800; line-height: 1.06; letter-spacing: -.03em; }
+  .project-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.45fr); gap: 0; margin-top: 22px; align-items: center; }
+  .project h2 { position: relative; margin: 0; padding-bottom: 34px; padding-right: 20px; font-size: clamp(1.4rem, 2.45vw, 2.3rem); font-weight: 800; line-height: 1.12; letter-spacing: -.03em; }
+  .project h2 span { display: block; white-space: nowrap; }
+  .project h2 .vs { color: var(--blue-deep); font-style: normal; }
   .project h2::after { content: ""; position: absolute; left: 6px; bottom: 0; width: min(230px, 86%); height: 24px; background: var(--blue); transform: skewX(-22deg); }
   .project .blurb { margin: 0; padding: 4px 28px; border-left: 1px solid var(--line); font-size: 1rem; line-height: 1.55; color: var(--ink-soft); }
   .project .blurb a { display: inline-block; margin-top: 14px; font-weight: 700; color: var(--ink); text-underline-offset: 4px; }
@@ -251,16 +253,11 @@
       <div class="cred" role="listitem"><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg><div><b>18+ Years</b><span>in Enterprise Tech</span></div></div>
     </div>
 
-    <div class="band stats" role="list" aria-label="Results">
-      <div class="stat" role="listitem"><b>5</b><span>platform upgrades</span></div>
-      <div class="stat" role="listitem"><b>28%</b><span>alert noise reduction</span></div>
-      <div class="stat" role="listitem"><b>42%</b><span>support ticket reduction</span></div>
-    </div>
 
     <section class="band project" id="project" aria-labelledby="proj-title">
       <p class="eyebrow">Featured project</p>
       <div class="project-grid">
-        <h2 id="proj-title">AI-Native vs AI-Automated IT Support</h2>
+        <h2 id="proj-title"><span>AI-Native <i class="vs">vs</i></span><span>AI-Automated IT Support</span></h2>
         <p class="blurb">A side-by-side prototype showing the difference between automating an existing support workflow and designing an AI-native, outcome-oriented support experience.<br><a href="showcase/">Read the case study</a></p>
         <a class="duo" href="showcase/" aria-label="Open the case study: automated workflow compared with AI-native assistant">
           <div class="duo-col duo-col--a">
