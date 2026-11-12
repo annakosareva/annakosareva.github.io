@@ -1,0 +1,1241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outcome vs. Workflow: design study</title>
+<meta name="description" content="Two ways to build IT access support: a form-driven workflow (AI automation) and an outcome-driven agent (AI-native). Flows, trade-offs and guardrails side by side.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F3F5F9;
+    --surface: #FFFFFF;
+    --ink: #14213D;
+    --ink-soft: #44516D;
+    --ink-faint: #5C6882;
+    --line: #D6DCE7;
+    --line-soft: #E6EAF1;
+
+    --a: #5D6B86;
+    --a-wash: #E9EDF4;
+    --b: #2C5BA6;
+    --b-wash: #E4ECF8;
+
+    --good: #1D6B58;
+    --warn: #94550F;
+    --warn-wash: #F6ECDD;
+
+    --sans: "Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --gutter: clamp(16px, 4vw, 40px);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, p, ul, ol, dl, dd { margin: 0; }
+  ul, ol { padding: 0; list-style: none; }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--b); outline-offset: 3px; border-radius: 4px; }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: var(--gutter); }
+  .section { padding-block: clamp(56px, 9vw, 112px); }
+  .section + .section { border-top: 1px solid var(--line); }
+
+  h2 {
+    font-size: clamp(1.75rem, 3.4vw, 2.6rem);
+    font-weight: 600;
+    font-stretch: 90%;
+    line-height: 1.1;
+    letter-spacing: -.015em;
+    max-width: 24ch;
+  }
+  .lede { color: var(--ink-soft); max-width: 62ch; margin-top: 16px; }
+
+  /* ---------- top bar ---------- */
+  .top { border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; justify-content: space-between; gap: 16px; padding-block: 16px; flex-wrap: wrap; }
+  .top strong { font-weight: 700; letter-spacing: -.01em; }
+  .top span { color: var(--ink-faint); font-size: .95rem; }
+
+  /* ---------- video: Alex's experience ---------- */
+  .player { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
+  .player video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+  .play {
+    position: absolute; inset: 0; margin: auto; width: 84px; height: 84px; border: 0; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer; background: var(--ink); color: #fff;
+    box-shadow: 0 10px 30px rgba(20, 33, 61, .28); transition: opacity .2s, scale .2s;
+  }
+  .play:hover { scale: 1.06; }
+  .play svg { width: 34px; height: 34px; fill: currentColor; }
+  .play .icon-play { margin-left: 5px; }
+  .play .icon-replay { display: none; fill: none; }
+  .player.is-ended .icon-play { display: none; }
+  .player.is-ended .icon-replay { display: block; }
+  .player.is-playing .play { opacity: 0; pointer-events: none; }
+
+  /* ---------- hero ---------- */
+  .hero { padding-block: clamp(48px, 8vw, 104px) clamp(48px, 7vw, 88px); }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 600px); gap: 48px; align-items: center; }
+  .hero-grid .player { align-self: center; }
+  .hero-meta { color: var(--ink-faint); font-size: 1rem; margin-bottom: 20px; }
+  h1 {
+    font-size: clamp(2.5rem, 5.4vw, 4.75rem);
+    font-weight: 600;
+    font-stretch: 86%;
+    line-height: 1.0;
+    letter-spacing: -.028em;
+    max-width: 15ch;
+    text-wrap: balance;
+  }
+  .hero-lede { margin-top: 28px; font-size: clamp(1.1rem, 1.6vw, 1.3rem); max-width: 52ch; color: var(--ink-soft); }
+  .hero-lede b { color: var(--ink); font-weight: 600; }
+
+  .fork { position: relative; margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .fork-lane { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 24px 26px 26px; }
+  .fork-lane--a { border-top: 4px solid var(--a); }
+  .fork-lane--b { border-top: 4px solid var(--b); }
+  .fork-name { font-size: .95rem; color: var(--ink-faint); }
+  .fork-lane h3 { font-size: 1.6rem; font-weight: 600; font-stretch: 90%; letter-spacing: -.015em; line-height: 1.15; margin-top: 2px; }
+  .fork-lane--a h3 { color: var(--a); }
+  .fork-lane--b h3 { color: var(--b); }
+  .fork-lane p { margin-top: 10px; color: var(--ink-soft); max-width: 44ch; }
+  .fork-lane .ask { color: var(--ink); font-weight: 500; font-stretch: 92%; font-size: 1.1rem; line-height: 1.35; margin-top: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line-soft); }
+  .fork-lane--a { --accent: var(--a); --wash: var(--a-wash); }
+  .fork-lane--b { --accent: var(--b); --wash: var(--b-wash); }
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 22px; margin-top: 20px; }
+  .blk {
+    position: relative; display: flex; flex-direction: column; gap: 2px;
+    background: var(--wash); border: 1px solid var(--line); border-top: 3px solid var(--accent);
+    border-radius: 8px; padding: 12px 12px 14px; min-width: 0;
+  }
+  .blk b { font-weight: 650; font-size: .95rem; line-height: 1.25; }
+  .blk .blk-sub { font-size: .82rem; line-height: 1.3; color: var(--ink-faint); }
+  .tys { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin-top: auto; padding-top: 12px; }
+  .tys .ty .ic { width: 20px; height: 20px; }
+  .blk:nth-child(-n+3)::after {
+    content: ""; position: absolute; top: 50%; right: -16px; width: 10px; height: 10px;
+    border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); transform: translateY(-50%) rotate(45deg);
+  }
+  .flow-foot, .flow-exit { grid-column: 1 / -1; margin-top: 22px; font-size: .9rem; color: var(--ink-faint); }
+  .flow-exit {
+    grid-column: 1 / 3; position: relative; color: var(--ink-soft);
+    border: 1.5px dashed var(--accent); border-radius: 8px; padding: 10px 14px;
+  }
+  .flow-exit b { color: var(--accent); font-weight: 650; }
+  .flow-exit::before { content: ""; position: absolute; left: 12.5%; top: -23px; height: 22px; border-left: 1.5px dashed var(--accent); }
+  /* ---- AI automation flowchart ---- */
+  .fork { align-items: start; }
+  .chart { display: flex; flex-direction: column; margin-top: 22px; }
+  .chart > li:not(.cycle) { margin-inline: 24px; }
+  .chart--inner { margin-top: 14px; }
+  .chart--inner > li:not(.cycle) { margin-inline: 0; }
+  .b2 {
+    position: relative; display: flex; align-items: center; gap: 14px;
+    padding: 12px 14px; background: var(--wash); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .badge {
+    position: relative; flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--surface); border: 2px solid var(--accent); color: var(--accent);
+  }
+  .badge .ic { width: 22px; height: 22px; color: inherit; }
+  .b2-text b { display: block; font-weight: 650; font-size: 1rem; line-height: 1.25; }
+  .b2-text span { display: block; font-size: .85rem; line-height: 1.35; color: var(--ink-faint); }
+  .ic--glyph, .b2 .ic--glyph { width: 22px; height: 22px; stroke-width: 1.6; color: var(--ink-faint); margin-left: auto; }
+  /* arrows between steps */
+  .chart > li + li, .cycle > .loopbox { margin-top: 30px; position: relative; }
+  .chart > li + li::before, .cycle > .loopbox::before {
+    content: ""; position: absolute; left: 50%; top: -30px; height: 30px; border-left: 2px solid var(--accent); transform: translateX(-1px);
+  }
+  .chart > li + li::after, .cycle > .loopbox::after {
+    content: ""; position: absolute; left: 50%; top: -9px; width: 9px; height: 9px;
+    border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: translateX(-50%) rotate(45deg);
+  }
+  .chart > li.handoff { padding: 9px 14px; text-align: center; font-size: .85rem; font-weight: 650; color: var(--accent); background: var(--surface); border: 1.5px dashed var(--accent); border-radius: 999px; }
+  .edge { position: absolute; left: calc(50% + 14px); top: -26px; white-space: nowrap; font-size: .8rem; line-height: 1; color: var(--ink-soft); font-weight: 600; }
+  /* repeat-until-complete loop */
+  .cycle { position: relative; }
+  .cycle > .b2--review { margin-inline: 24px; }
+  .loopbox {
+    margin-inline: 24px; padding: 14px 14px 16px; background: var(--surface);
+    border: 1.5px dashed var(--accent); border-radius: 12px;
+  }
+  .loopbox .loop-title, .manual .loop-title, .together .loop-title { font-size: .85rem; font-weight: 650; color: var(--accent); }
+  /* the manual steps Alex does before any system is involved */
+  .manual { padding: 14px 14px 16px; background: var(--surface); border: 1.5px dashed var(--accent); border-radius: 12px; }
+  .terms { margin-top: 16px; max-width: 80ch; font-size: .95rem; color: var(--ink-soft); }
+  .terms b { color: var(--ink); font-weight: 650; }
+  .chart--inner.chart--steps > li + li { margin-top: 30px; }
+  .chart--inner.chart--steps > li + li::before, .chart--inner.chart--steps > li + li::after { display: block; }
+  /* the exchange between the agent and Alex repeats: a circle, not a straight arrow */
+  .chart--inner > li + li { margin-top: 52px; }
+  .chart--inner > li + li::before, .chart--inner > li + li::after { display: none; }
+  .spin {
+    position: absolute; left: 50%; top: -46px; width: 40px; height: 40px; transform: translateX(-50%);
+    display: grid; place-items: center; border-radius: 50%;
+    background: var(--accent); color: #fff; border: 3px solid var(--surface); box-shadow: 0 0 0 1.5px var(--accent);
+  }
+  .spin .ic { width: 22px; height: 22px; color: inherit; stroke-width: 2; }
+  /* steps that happen at the same time: fork, two blocks side by side, join */
+  .chart > li.par { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 44px; position: relative; }
+  .chart > li.par::before, .chart > li.fan::before, .chart > li.alt::before {
+    content: ""; position: absolute; top: -22px; height: 22px; left: calc(25% - 4px); right: calc(25% - 4px);
+    border: 2px solid var(--accent); border-bottom: 0; transform: none;
+  }
+  .chart > li.par::after, .chart > li.fan::after, .chart > li.alt::after {
+    content: ""; position: absolute; top: -44px; height: 22px; left: 50%; width: 0;
+    border: 0; border-left: 2px solid var(--accent); transform: translateX(-1px);
+  }
+  .par > .b2::before {
+    content: ""; position: absolute; left: 50%; top: -9px; width: 9px; height: 9px;
+    border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: translateX(-50%) rotate(45deg);
+  }
+  .par-label {
+    position: absolute; left: 50%; top: -22px; transform: translate(-50%, -50%); z-index: 1; white-space: nowrap;
+    background: var(--surface); border: 1.5px solid var(--accent); border-radius: 999px;
+    padding: 2px 10px; font-size: .78rem; font-weight: 650; line-height: 1.3; color: var(--ink-soft);
+  }
+  .join {
+    position: absolute; bottom: -22px; height: 22px; left: calc(25% - 4px); right: calc(25% - 4px);
+    border: 2px solid var(--accent); border-top: 0;
+  }
+  .chart > .par + li { margin-top: 44px; }
+  .chart > .par + li::before { top: -22px; height: 22px; }
+  /* a parallel pair that follows a labelled exit: extra room above for the "Nothing is missing" label */
+  .chart > li.par--tall { margin-top: 62px; }
+  .chart > li.par--tall::after { top: -62px; height: 40px; }
+  .par--tall > .edge { top: -58px; }
+  @media (max-width: 520px) {
+    .chart > li.par { grid-template-columns: 1fr; gap: 14px; }
+    .chart > li.par::before, .par > .b2::before, .join { display: none; }
+    .chart > li.par::after, .chart > li.fan::after, .chart > li.alt::after { top: -44px; height: 44px; }
+  }
+  /* AI-native: dual-actor badge, phase tags, situation fan-out, approve/reject split */
+  .badge .mini {
+    position: absolute; right: -7px; bottom: -7px; width: 21px; height: 21px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--accent); color: #fff; border: 2px solid var(--wash);
+  }
+  .badge .mini .ic { width: 12px; height: 12px; color: inherit; stroke-width: 2.2; }
+  .b2-text { min-width: 0; }
+  .b2-text .ph {
+    display: inline-block; font-style: normal; font-size: .72rem; font-weight: 650; line-height: 1.2;
+    padding: 2px 7px; margin-bottom: 4px; border-radius: 4px; background: var(--surface); color: var(--accent);
+  }
+  .aside {
+    margin-top: 10px; border: 1.5px dashed var(--accent); border-radius: 8px; padding: 8px 12px;
+    font-size: .85rem; line-height: 1.35; color: var(--ink-soft);
+  }
+  .chart > li.fan, .chart > li.alt { display: grid; gap: 12px; margin-top: 44px; position: relative; }
+  .chart > li.fan { grid-template-columns: repeat(3, 1fr); }
+  .chart > li.alt { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart > li.fan::before { left: calc(16.667% - 4px); right: calc(16.667% - 4px); }
+  .alt .b2, .par .b2 { gap: 12px; padding: 10px 12px; }
+  /* four-way fork: the carry-on option sits third and rejoins the main line with an elbow */
+  .chart > li.fan--4 { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .chart > li.fan--4::before {
+    left: calc(12.5% - 4px); right: calc(12.5% - 4px);
+    background:
+      linear-gradient(var(--accent), var(--accent)) 33.333% 0 / 2px 100% no-repeat,
+      linear-gradient(var(--accent), var(--accent)) 66.667% 0 / 2px 100% no-repeat;
+  }
+  .fan--4 > .opt { padding: 9px 9px 10px; }
+  .fan--4 > .opt b { font-size: .84rem; }
+  .fan--4 > .opt span { font-size: .76rem; }
+  .chart > li.fan--4 > .opt--go::after {
+    content: ""; position: absolute; top: 100%; right: 50%; left: auto; width: calc(50% + 5px); height: 15px;
+    border: 0; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: none;
+  }
+  .chart > li.fan--4 + li::before { top: -15px; height: 15px; }
+  .opt { position: relative; background: var(--wash); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .opt b { display: block; font-size: .9rem; line-height: 1.25; font-weight: 650; }
+  .opt span { display: block; margin-top: 3px; font-size: .8rem; line-height: 1.35; color: var(--ink-faint); }
+  .opt--go { border-top: 3px solid var(--accent); }
+  .opt--stop { background: var(--surface); border-style: dashed; }
+  .fan > .opt::before, .alt > .col::before {
+    content: ""; position: absolute; left: 50%; top: -9px; width: 9px; height: 9px;
+    border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: translateX(-50%) rotate(45deg);
+  }
+  .fan > .opt--go::after {
+    content: ""; position: absolute; left: 50%; top: -22px; height: 22px; border-left: 2px solid var(--accent); transform: translateX(-1px);
+  }
+  .col { position: relative; display: flex; flex-direction: column; }
+  .col-label {
+    align-self: center; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 999px;
+    padding: 2px 12px; font-size: .78rem; font-weight: 650; line-height: 1.3; color: var(--ink-soft);
+  }
+  .col > .b2, .col > .together { margin-top: 30px; position: relative; }
+  .col > .b2::before, .col > .together::before { content: ""; position: absolute; left: 50%; top: -30px; height: 30px; border-left: 2px solid var(--accent); transform: translateX(-1px); }
+  .col > .b2::after, .col > .together::after {
+    content: ""; position: absolute; left: 50%; top: -9px; width: 9px; height: 9px;
+    border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: translateX(-50%) rotate(45deg);
+  }
+  @media (max-width: 520px) {
+    .chart > li.fan, .chart > li.alt { grid-template-columns: 1fr; gap: 14px; }
+    .chart > li.fan::before, .chart > li.alt::before, .fan > .opt::before, .alt > .col::before, .fan > .opt--go::after { display: none; }
+    .chart > li.fan::after, .chart > li.alt::after { top: -44px; height: 44px; }
+    .chart > li.alt { gap: 26px; }
+    .chart > li.fan--4 { grid-template-columns: 1fr; gap: 14px; }
+    .chart > li.fan--4 > .opt--go::after { display: none; }
+    .chart > li.fan--4 + li::before { top: -30px; height: 30px; }
+  }
+  /* legend sample of the dual-actor badge */
+  .legend { --accent: var(--ink-soft); --wash: var(--paper); }
+  .legend .badge { width: 26px; height: 26px; border-width: 1.5px; }
+  .legend .badge .ic { width: 15px; height: 15px; color: inherit; }
+  .legend .badge .mini { width: 15px; height: 15px; right: -5px; bottom: -5px; border-width: 1.5px; }
+  .legend .badge .mini .ic { width: 9px; height: 9px; }
+  .together { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--surface); border: 1.5px dashed var(--accent); border-radius: 12px; }
+  .together .loop-title { margin-bottom: 2px; }
+  .fork-lane .flow-foot { margin-top: 24px; color: var(--ink-faint); font-size: .9rem; max-width: none; }
+  .closer { padding-block: clamp(56px, 8vw, 96px); border-top: 1px solid var(--line); }
+  .closer p { font-size: clamp(1.6rem, 3.6vw, 2.8rem); font-weight: 600; font-stretch: 88%; line-height: 1.12; letter-spacing: -.02em; max-width: 24ch; }
+  .closer p { max-width: 40ch; }
+  .closer .a, .closer .b { display: block; }
+  .closer .b { margin-top: .25em; }
+  .closer .a { color: var(--a); }
+  .closer .b { color: var(--b); }
+
+  /* ---------- flow explorer ---------- */
+  .pick { margin-top: 36px; font-size: .95rem; color: var(--ink-faint); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .find {
+    position: relative; margin-top: 20px; padding: 12px 14px; border: 1.5px dashed var(--accent);
+    border-radius: 8px; background: var(--wash); color: var(--ink-soft); font-size: .95rem;
+  }
+  .find::after { content: ""; position: absolute; left: 8px; bottom: -21px; height: 20px; border-left: 2px solid var(--line); }
+  .find b { color: var(--accent); font-weight: 650; }
+  .find--none { background: transparent; }
+  .find--none b { color: var(--ink-soft); }
+  .find + .steps { margin-top: 22px; }
+  .tab {
+    font: inherit; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 9px 18px; cursor: pointer; display: inline-flex; gap: 10px; align-items: baseline;
+    transition: background-color .15s, border-color .15s, color .15s;
+  }
+  .tab b { font-family: var(--mono); font-weight: 500; font-size: .85rem; color: var(--ink-faint); }
+  .tab:hover { border-color: var(--ink-soft); }
+  .tab[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .tab[aria-selected="true"] b { color: #B9C6E4; }
+
+  .world { margin-top: 28px; display: grid; gap: 10px; }
+  .world-state { color: var(--ink-soft); }
+  .world-state b { color: var(--ink); font-weight: 600; }
+  .notice {
+    font-size: clamp(1.35rem, 2.6vw, 2rem); font-weight: 600; font-stretch: 90%;
+    line-height: 1.2; letter-spacing: -.012em; max-width: 34ch;
+  }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 28px; font-size: .9rem; color: var(--ink-soft); }
+  .legend li { display: inline-flex; align-items: center; gap: 8px; }
+  .legend b { color: var(--ink); font-weight: 650; }
+  .legend--hero { margin-top: 24px; }
+
+  .lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; align-items: start; }
+  .lane { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 24px 26px 26px; }
+  .lane--a { border-top: 4px solid var(--a); --accent: var(--a); --wash: var(--a-wash); }
+  .lane--b { border-top: 4px solid var(--b); --accent: var(--b); --wash: var(--b-wash); }
+  .lane-head h3 { font-size: 1.3rem; font-weight: 600; font-stretch: 90%; letter-spacing: -.01em; color: var(--accent); }
+  .lane-head p { color: var(--ink-faint); font-size: .95rem; margin-top: 2px; }
+
+  .steps { position: relative; margin-top: 22px; }
+  .steps::before { content: ""; position: absolute; left: 8px; top: 10px; bottom: 10px; width: 2px; background: var(--line); }
+  .step { position: relative; padding: 0 0 20px 40px; }
+  .step:last-child { padding-bottom: 0; }
+  .node {
+    position: absolute; left: -4px; top: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--surface); border: 2px solid var(--accent); color: var(--accent);
+  }
+  .node .ic { width: 17px; height: 17px; color: inherit; }
+  .node--noeffect { background: var(--warn-wash); border-color: var(--warn); border-style: dashed; color: var(--warn); }
+  .node--gap { background: var(--warn); border-color: var(--warn); color: #fff; }
+
+  /* icons: person = human, robot = AI, laptop = automation */
+  .ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--accent, var(--ink-soft)); }
+  .ic--lg { width: 24px; height: 24px; }
+  .ty .ic { width: 21px; height: 21px; }
+  .legend .ic { color: var(--ink-soft); }
+
+  .step-text b { font-weight: 650; }
+  .phase {
+    display: inline-block; font-size: .8rem; line-height: 1; padding: 4px 8px; margin-right: 8px;
+    border-radius: 4px; background: var(--wash); color: var(--accent); font-weight: 600; vertical-align: 1px;
+  }
+  .tool { display: block; margin-top: 3px; color: var(--ink-faint); }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; }
+  .meta .tool { display: inline; margin-top: 0; }
+  .ty { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; color: var(--ink-soft); line-height: 1.2; }
+  .note { margin-top: 5px; font-size: .92rem; color: var(--ink-faint); max-width: 46ch; }
+  .chip { display: inline-block; margin-top: 6px; font-size: .84rem; font-weight: 600; color: var(--warn); background: var(--warn-wash); border-radius: 4px; padding: 3px 8px; }
+
+  .outcome { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line-soft); }
+  .outcome p { font-weight: 600; }
+  .outcome--caution p { color: var(--warn); }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 16px; }
+  .stat dt { font-size: .82rem; color: var(--ink-faint); line-height: 1.25; }
+  .stat dd { font-size: 1.7rem; font-weight: 600; font-stretch: 90%; letter-spacing: -.02em; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .counted { font-size: .85rem; color: var(--ink-faint); margin-top: 10px; }
+
+  .step.in { animation: stepIn .32s ease-out both; animation-delay: calc(var(--i) * 45ms); }
+  @keyframes stepIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .caveat {
+    margin-top: 28px; padding: 14px 18px; border-left: 3px solid var(--ink-soft);
+    background: var(--surface); border-radius: 0 8px 8px 0; color: var(--ink-soft); font-size: .95rem; max-width: 78ch;
+  }
+  .caveat b { color: var(--ink); }
+
+  /* ---------- trade-offs ---------- */
+  .matrix { margin-top: 44px; border-top: 1px solid var(--ink); }
+  .m-head, .m-row { display: grid; grid-template-columns: minmax(150px, .8fr) 1.1fr 1.1fr; gap: 28px; }
+  .m-head { padding: 14px 0; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .m-head .a { color: var(--a); }
+  .m-head .b { color: var(--b); }
+  .m-row { padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .m-q { font-weight: 600; font-stretch: 92%; line-height: 1.3; }
+  .m-cell p { color: var(--ink-soft); margin-top: 8px; max-width: 46ch; }
+  .m-cell--both { grid-column: 2 / 4; }
+  /* counts under each block schema */
+  .stats--4 { grid-template-columns: repeat(4, 1fr); }
+  .hero-count { margin-top: 28px; }
+  .hero-count p { max-width: none; }
+  .hero-count .hc-line { margin-top: 0; color: var(--ink); }
+  .calls { margin-top: 28px; border-top: 1px solid var(--ink); }
+  .c-head, .c-row { display: grid; grid-template-columns: minmax(150px, 1.1fr) 1fr 1fr 1fr 2fr; gap: 20px; }
+  .c-head { padding: 12px 0; border-bottom: 1px solid var(--line); font-weight: 600; font-size: .95rem; color: var(--ink-soft); }
+  .c-row { padding: 16px 0; border-bottom: 1px solid var(--line); align-items: start; }
+  .c-name { font-weight: 600; line-height: 1.3; }
+  .c-cell { display: flex; gap: 16px; font-size: 1rem; }
+  .c-cell b { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .c-cell .ca { color: var(--a); }
+  .c-cell .cb { color: var(--b); }
+  .c-note { color: var(--ink-soft); font-size: .95rem; }
+  .calls-note { margin-top: 18px; max-width: 78ch; color: var(--ink-soft); }
+  .calls-note b { color: var(--ink); font-weight: 650; }
+  @media (max-width: 820px) {
+    .c-head { display: none; }
+    .c-row { grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+    .c-name, .c-note { grid-column: 1 / -1; }
+    .c-cell { flex-wrap: wrap; }
+    .c-cell::before { content: attr(data-label); flex-basis: 100%; font-size: .82rem; color: var(--ink-faint); }
+  }
+  .m-group { padding: 26px 0 10px; font-weight: 650; font-size: .95rem; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  .m-cell--both p { max-width: 70ch; }
+  .m-cell .m-side { display: none; }
+
+  .tag { display: inline-flex; align-items: center; gap: 8px; font-size: .92rem; font-weight: 650; }
+  .tag i { width: 12px; height: 12px; display: inline-block; flex: none; }
+  .tag--strong { color: var(--good); }
+  .tag--strong i { border-radius: 50%; background: var(--good); }
+  .tag--weak { color: var(--warn); }
+  .tag--weak i { background: var(--warn); transform: rotate(45deg) scale(.85); border-radius: 2px; }
+  .tag--trade { color: var(--ink-soft); }
+  .tag--trade i { border-radius: 50%; border: 2px solid var(--ink-soft); background: linear-gradient(90deg, var(--ink-soft) 50%, transparent 50%); }
+  .tag--shared { color: var(--ink); }
+  .tag--shared i { background: var(--ink); border-radius: 2px; }
+
+  /* ---------- guardrails ---------- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 40px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 24px 26px; }
+  .panel h3 { font-size: 1.15rem; font-weight: 600; font-stretch: 90%; }
+  .panel li { padding: 10px 0; border-top: 1px solid var(--line-soft); color: var(--ink-soft); }
+  .panel li:first-child { margin-top: 12px; }
+  .panel li b { color: var(--ink); font-weight: 600; }
+
+  .sub { font-size: 1.35rem; font-weight: 600; font-stretch: 90%; letter-spacing: -.01em; margin-top: 72px; max-width: 36ch; line-height: 1.2; }
+
+  .gates { display: grid; grid-template-columns: repeat(4, 1fr); gap: 36px; margin-top: 28px; position: relative; }
+  .gate { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--ink); border-radius: 10px; padding: 18px 20px 22px; position: relative; }
+  .gate:not(:last-child)::after {
+    content: ""; position: absolute; top: 50%; right: -26px; width: 16px; height: 16px;
+    border-top: 2px solid var(--ink); border-right: 2px solid var(--ink); transform: translateY(-50%) rotate(45deg) scale(.7);
+  }
+  .gate h4 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+  .gate p { margin-top: 8px; color: var(--ink-soft); font-size: .96rem; }
+  .gate--model { border-top-color: var(--b); }
+  .gate--idp { border-top-color: var(--good); }
+  .denied { margin-top: 20px; padding: 16px 20px; border: 1px dashed var(--warn); border-radius: 10px; background: var(--warn-wash); color: var(--warn); font-weight: 600; max-width: 78ch; }
+  .denied span { font-weight: 400; color: var(--ink-soft); display: block; margin-top: 2px; }
+
+  .loop { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 28px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+  .loop-cell { padding: 20px 22px 22px; }
+  .loop-cell + .loop-cell { border-left: 1px solid var(--line); }
+  .loop-cell h4 { margin: 0; font-size: 1.1rem; font-weight: 650; color: var(--b); }
+  .loop-cell p { margin-top: 4px; font-size: .95rem; color: var(--ink-soft); }
+  .loop-cell code { display: block; margin-top: 8px; color: var(--ink-faint); line-height: 1.5; }
+  .loop-foot { margin-top: 12px; color: var(--ink-faint); font-size: .95rem; max-width: 78ch; }
+
+  /* ---------- limits ---------- */
+  .limits { margin-top: 36px; max-width: 70ch; border-top: 1px solid var(--ink); }
+  .limits li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+  .limits b { font-weight: 650; }
+  .limits span { display: block; color: var(--ink-soft); margin-top: 2px; }
+
+  .foot { padding-block: 40px 64px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: .95rem; }
+  .foot .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 32px; }
+  .sim { display: inline-block; font-size: .82rem; font-weight: 600; color: var(--ink-soft); border: 1px solid var(--ink-soft); border-radius: 4px; padding: 2px 7px; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 820px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+  }
+  @media (max-width: 1180px) {
+    .fork { grid-template-columns: 1fr; padding-top: 0; margin-top: 40px; }
+  }
+  @media (max-width: 980px) {
+    .gates { grid-template-columns: 1fr 1fr; gap: 20px; }
+    .gate:not(:last-child)::after { display: none; }
+    .loop { grid-template-columns: 1fr 1fr; }
+    .loop-cell:nth-child(3) { border-left: 0; }
+    .loop-cell:nth-child(n+3) { border-top: 1px solid var(--line); }
+  }
+  @media (max-width: 820px) {
+    .fork, .lanes, .split { grid-template-columns: 1fr; }
+    .fork { padding-top: 0; margin-top: 40px; }
+    .m-head { display: none; }
+    .m-row { grid-template-columns: 1fr; gap: 16px; }
+    .m-cell--both { grid-column: auto; }
+    .m-cell .m-side { display: block; font-size: .85rem; color: var(--ink-faint); margin-bottom: 4px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .flow { grid-template-columns: 1fr; gap: 20px 0; }
+    .blk:nth-child(-n+3)::after { top: auto; bottom: -15px; right: auto; left: 20px; transform: rotate(135deg); }
+    .flow-exit { grid-column: 1; }
+    .flow-exit::before { left: 20px; }
+  }
+  @media (max-width: 560px) {
+    .gates, .loop { grid-template-columns: 1fr; }
+    .loop-cell + .loop-cell { border-left: 0; border-top: 1px solid var(--line); }
+    .lane, .fork-lane, .panel { padding: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .step.in { animation: none; }
+    .tab { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Icon sprite: person = human, robot = AI, laptop = automation -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-human" viewBox="0 0 24 24">
+    <circle cx="12" cy="8" r="3.6"/>
+    <path d="M4.5 20.5c0-4.1 3.4-7 7.5-7s7.5 2.9 7.5 7"/>
+  </symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24">
+    <rect x="5" y="8.5" width="14" height="11" rx="3"/>
+    <path d="M12 8.5V5M3 12.5v4M21 12.5v4M9.5 16.5h5"/>
+    <circle cx="12" cy="3.8" r="1.1" fill="currentColor" stroke="none"/>
+    <circle cx="9" cy="12.8" r="1.2" fill="currentColor" stroke="none"/>
+    <circle cx="15" cy="12.8" r="1.2" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-cycle" viewBox="0 0 24 24">
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+    <path d="M21 3v5h-5"/>
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+    <path d="M3 21v-5h5"/>
+  </symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24">
+    <rect x="3" y="5.5" width="18" height="13" rx="2"/>
+    <path d="M3.5 7.5l8.5 6 8.5-6"/>
+  </symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24">
+    <rect x="5" y="5" width="14" height="10" rx="1.6"/>
+    <path d="M2.5 18.5h19l-1.6 2H4.1z"/>
+  </symbol>
+</svg>
+
+<div class="top">
+  <div class="wrap">
+    <strong>Outcome vs. Workflow</strong>
+    <span>Design study by Anna Kosareva, November 2026</span>
+  </div>
+</div>
+
+<main>
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+      <div class="hero-copy">
+      <p class="hero-meta">Alex Chen has a problem. Two IT support systems handle it.</p>
+      <h1>“I can’t open the page.”</h1>
+      <p class="hero-lede">Both follow the same security rules.<br><b>The difference is how they figure out what to do next.</b></p>
+      </div>
+      <div class="player" aria-label="AI automation and AI-native, step by step">
+        <video src="compare-ab.mp4" poster="compare-ab-poster.jpg" preload="metadata" playsinline muted>
+          Your browser can’t play this video.
+        </video>
+        <button class="play" type="button" aria-label="Play AI automation and AI-native, step by step">
+          <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>
+          <svg class="icon-replay" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 4.5v4.6h4.6"/></svg>
+        </button>
+      </div>
+      </div>
+
+      <div class="fork">
+        <article class="fork-lane fork-lane--a">
+          <p class="fork-name">AI automation</p>
+          <h3>The form decides</h3>
+          <p class="ask">Asks: how can we automate the steps people already perform?</p>
+          <ol class="chart" aria-label="AI automation, step by step">
+            <li class="manual">
+              <div class="loop-title">Alex does this by hand</div>
+              <ol class="chart chart--inner chart--steps">
+                <li class="b2">
+                  <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+                  <span class="b2-text"><b>Alex can’t open the page</b><span>Nothing tells him why</span></span>
+                </li>
+                <li class="b2">
+                  <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+                  <span class="b2-text"><b>He realizes he never requested access</b><span>He works that out himself</span></span>
+                </li>
+                <li class="b2">
+                  <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+                  <span class="b2-text"><b>He finds the access request form</b><span>Choosing the form chooses the template</span></span>
+                </li>
+                <li class="b2">
+                  <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+                  <span class="b2-text"><b>He fills out the form</b><span>System, environment, access level and justification</span></span>
+                </li>
+              </ol>
+            </li>
+            <li class="b2">
+              <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+              <span class="b2-text"><b>Form checks the required fields and creates the request</b><span>It won’t submit until every field is filled in, then saves the request with the access request template</span></span>
+            </li>
+            <li class="b2">
+              <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+              <span class="b2-text"><b>Check the next step in the template</b><span>The template says what comes next</span></span>
+            </li>
+            <li class="par">
+              <span class="par-label">At the same time</span>
+              <div class="b2">
+                <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                <span class="b2-text"><b>Request approval</b><span>Email with Approve and Reject buttons</span></span>
+              </div>
+              <div class="b2">
+                <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                <span class="b2-text"><b>Update the request</b><span>Alex is told; the status moves to Waiting for approval</span></span>
+              </div>
+              <span class="join" aria-hidden="true"></span>
+            </li>
+            <li class="b2">
+              <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+              <span class="b2-text"><b>Manager approves or rejects</b><span>A manual step: a click in the email</span></span>
+              <svg class="ic ic--glyph" aria-hidden="true"><use href="#i-mail"/></svg>
+            </li>
+            <li class="alt">
+              <span class="par-label">Approved or rejected?</span>
+              <div class="col">
+                <span class="col-label">If approved</span>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Grant access</b><span>The workflow gives Alex Read access</span></span>
+                </div>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Test access</b><span>The workflow reads the access back</span></span>
+                </div>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Tell Alex it’s done</b><span>A message to the user</span></span>
+                </div>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Close the request</b><span>Status changes to Done</span></span>
+                </div>
+              </div>
+              <div class="col" data-path="rejected">
+                <span class="col-label">If rejected</span>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Tell Alex it was rejected</b><span>A message to the user</span></span>
+                </div>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Close the request as rejected</b><span>Status changes to Rejected</span></span>
+                </div>
+              </div>
+            </li>
+          </ol>
+          <div class="outcome hero-count" data-count="a">
+            <p class="hc-line">Access granted, by the same path every request takes.</p>
+            <dl class="stats stats--4"></dl>
+            <p class="counted">Counted from the blocks above, for one request on the approved path.</p>
+          </div>
+          <p class="flow-foot">The form’s template follows the type of request. Nothing checks which situation Alex is in.</p>
+        </article>
+        <article class="fork-lane fork-lane--b">
+          <p class="fork-name">AI-native</p>
+          <h3>The state decides</h3>
+          <p class="ask">Asks: what outcome does the user need, what rules constrain it, and which actions are actually necessary?</p>
+          <ol class="chart" aria-label="AI-native, step by step">
+            <li class="b2">
+              <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+              <span class="b2-text"><b>Alex writes a message</b><span>“I can’t open the page”</span></span>
+            </li>
+            <li class="b2">
+              <span class="badge badge--mix" role="img" aria-label="AI chooses, automation runs" title="AI chooses, automation runs"><svg class="ic" aria-hidden="true"><use href="#i-ai"/></svg><span class="mini"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span></span>
+              <span class="b2-text"><i class="ph">Observe</i><b>Agent troubleshoots the situation</b><span>Checks his access, open requests and system health</span></span>
+            </li>
+            <li class="fan">
+              <span class="par-label">Which situation?</span>
+              <div class="opt opt--stop"><b>Production issue</b><span>The system is down. Tells Alex it is a known outage, then stops</span></div>
+              <div class="opt opt--go"><b>No access yet</b><span>It is an access problem. Carries on</span></div>
+              <div class="opt opt--stop"><b>Request pending</b><span>Tells Alex it is with the approver, then stops</span></div>
+            </li>
+            <li class="cycle">
+              <div class="b2 b2--review">
+                <span class="badge badge--mix" role="img" aria-label="AI chooses, automation runs" title="AI chooses, automation runs"><svg class="ic" aria-hidden="true"><use href="#i-ai"/></svg><span class="mini"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span></span>
+                <span class="b2-text"><i class="ph">Decide</i><b>Agent reads the policy and checks what is missing</b><span>Fills in the defaults, finds the approver and sees what is still missing. The justification has to come from Alex</span></span>
+              </div>
+              <div class="loopbox">
+                <span class="edge">Something is missing</span>
+                <div class="loop-title">Repeats until nothing is missing</div>
+                <ol class="chart chart--inner">
+                  <li class="b2">
+                    <span class="badge badge--mix" role="img" aria-label="AI chooses, automation runs" title="AI chooses, automation runs"><svg class="ic" aria-hidden="true"><use href="#i-ai"/></svg><span class="mini"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span></span>
+                    <span class="b2-text"><i class="ph">Ask</i><b>Agent asks Alex the questions</b><span>Goes back to the user</span></span>
+                  </li>
+                  <li class="b2">
+                    <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+                    <span class="b2-text"><b>Alex answers</b><span>The agent checks again</span></span>
+                    <span class="spin" role="img" aria-label="Repeats" title="Repeats"><svg class="ic" aria-hidden="true"><use href="#i-cycle"/></svg></span>
+                  </li>
+                </ol>
+              </div>
+            </li>
+            <li class="handoff"><span class="edge">Nothing is missing</span>A fixed workflow takes over. The model is no longer involved.</li>
+            <li class="par">
+              <span class="par-label">At the same time</span>
+              <div class="b2">
+                <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                <span class="b2-text"><b>Request approval</b><span>Once, by email with Approve and Reject buttons</span></span>
+              </div>
+              <div class="b2">
+                <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                <span class="b2-text"><b>Update Alex</b><span>He knows it’s waiting, and for whom</span></span>
+              </div>
+              <span class="join" aria-hidden="true"></span>
+            </li>
+            <li class="b2">
+              <span class="badge" role="img" aria-label="Human" title="Human"><svg class="ic" aria-hidden="true"><use href="#i-human"/></svg></span>
+              <span class="b2-text"><b>Manager approves or rejects</b><span>A manual step: a click in the email. The workflow resumes from the saved request.</span></span>
+            </li>
+            <li class="alt">
+              <span class="par-label">Approved or rejected?</span>
+              <div class="col">
+                <span class="col-label">If approved</span>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Grant access</b><span>The identity provider re-checks the approval</span></span>
+                </div>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Test access</b><span>Confirms it really works</span></span>
+                </div>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Tell Alex it’s ready</b><span>Invites him to sign in</span></span>
+                </div>
+              </div>
+              <div class="col" data-path="rejected">
+                <span class="col-label">If rejected</span>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Status set to rejected</b><span>Set by code, never by the model</span></span>
+                </div>
+                <div class="b2">
+                  <span class="badge" role="img" aria-label="Automation" title="Automation"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span>
+                  <span class="b2-text"><b>Tell Alex it was declined</b><span>No access is granted</span></span>
+                </div>
+              </div>
+            </li>
+          </ol>
+          <div class="outcome hero-count" data-count="b">
+            <p class="hc-line">Access granted, after the agent worked out the case.</p>
+            <dl class="stats stats--4"></dl>
+            <p class="counted">Counted from the blocks above, for one request on the approved path. A step where the agent uses a tool counts as both AI and automation.</p>
+          </div>
+          <p class="flow-foot">The agent works out the case and asks for what is missing. A fixed workflow runs the rest and enforces the rules.</p>
+        </article>
+      </div>
+
+      <ul class="legend legend--hero" aria-label="What the icons mean">
+        <li><svg class="ic ic--lg" aria-hidden="true"><use href="#i-human"/></svg><b>Human</b> a person acts</li>
+        <li><svg class="ic ic--lg" aria-hidden="true"><use href="#i-auto"/></svg><b>Automation</b> fixed code, rules, forms, templates</li>
+        <li><svg class="ic ic--lg" aria-hidden="true"><use href="#i-ai"/></svg><b>AI</b> the model reads or chooses</li>
+        <li><span class="badge badge--mix" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#i-ai"/></svg><span class="mini"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></span></span><b>AI + automation</b> the agent chooses, automation runs and enforces it</li>
+      </ul>
+
+      <p class="terms"><b>Policy:</b> who may have what, and who approves. <b>Template:</b> what a request must contain and what happens next, written by the support team from the policy and behind the form.</p>
+
+      <p class="caveat"><b>Expected paths, not measurements.</b> These flows are design models. AI automation is modeled as a form and a fixed workflow, not as the Jira code in this repository. Recorded runs and audit-log counts will replace the expected numbers, including where they disagree. Every service shown is simulated.</p>
+    </div>
+  </section>
+
+  <!-- ================= SUMMARY ================= -->
+  <section class="section" id="summary">
+    <div class="wrap">
+      <h2>Where each design is strong, and where it isn’t</h2>
+      <p class="lede">Neither wins everywhere. Both wait for a person to approve; the rest comes down to who works out the case, who keeps the rules current, and how you find out what happened.</p>
+
+      <div class="matrix" role="table" aria-label="Strengths and weaknesses">
+        <div class="m-head" role="row">
+          <span role="columnheader">Topic</span>
+          <span class="a" role="columnheader">AI automation</span>
+          <span class="b" role="columnheader">AI-native</span>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Who works out who can help?</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--weak"><i></i>Weak</span>
+            <p>Alex does. He has to realize he needs access and find the right form himself.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>The agent does. It works out the case from what Alex says and what it can check.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Is it really an access problem?</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--weak"><i></i>Weak</span>
+            <p>Not checked. The form runs even if Alex already has access or the system is down.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>Checked first: does he already have access, and is the system up?</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Where does the required information live?</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>In the form’s template, which the support team writes from the policy and updates by hand when the policy changes. Every field is required, justification included, so nothing comes back for more.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>In the policy’s system defaults, so Alex isn’t asked what the policy knows. The justification still comes from him, so the agent asks for it in chat. A policy change needs no template edit.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Keeping the rules current</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--weak"><i></i>Weak</span>
+            <p>The support team updates the forms and templates by hand when the policy changes. Triggering that update from the policy may not be possible.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>The agent reads the policy directly. A change applies at once.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">How Alex is told</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>Notifications from the form system, in fixed wording: waiting, done and declined. Predictable and on record, but it can’t answer a question he asks back.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>Replies in the same chat where he asked. The agent writes the questions and explanations. Waiting, ready and declined are fixed text from the workflow, so the key messages can’t drift.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Tracking the issue</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>The request record follows every step, with the justification and approval attached. The workflow can also log its key steps.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>The request is saved with a status, and the agent’s own logs feed metrics and dashboards. A view for non-engineers has to be built on top.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">When it breaks</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>Anyone can open the request, see which step it stopped at and what to do next.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--weak"><i></i>Weak</span>
+            <p>Someone has to read the logs. There is no request page to look at.</p></div>
+        </div>
+
+        <div class="m-group">Also worth weighing</div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">What does the model add?</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>Nothing, by design: the form is plain automation. It is cheap and predictable, and it can’t read “I can’t open the page” or decide which checks to run.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>Reading the message, choosing the checks and asking only for what is missing. The steps after that are a fixed workflow, not chosen by the model.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Upkeep of the system itself</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>Forms, templates and a fixed workflow. Generating them from a structured policy would shrink the work.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--weak"><i></i>Weak</span>
+            <p>A few read-only tools, prompts, tests and model updates, plus the workflow behind it. The policy has to be structured data, not prose.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Audit trail and hand-off</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>The request record is the audit trail and the place a person picks the case up, justification included. The workflow can log its key steps too.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>Logs must be durable and readable by auditors. When the agent can’t resolve a case, a person needs somewhere to pick it up: a request record only for exceptions would do.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Cost and predictability</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--strong"><i></i>Strong</span>
+            <p>Predictable: no model calls at all (expected). The cost is upkeep, wasted approvals and Alex’s manual steps.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--weak"><i></i>Weak</span>
+            <p>A model call for each reading and asking step, about 4 for a normal request (expected), each carrying the instructions and tools. Answers can vary between runs, and it needs testing and security work.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Adding more request types</div>
+          <div class="m-cell" role="cell"><span class="m-side">AI automation</span>
+            <span class="tag tag--weak"><i></i>Weak</span>
+            <p>Each new request type needs its own form and template.</p></div>
+          <div class="m-cell" role="cell"><span class="m-side">AI-native</span>
+            <span class="tag tag--trade"><i></i>Trade-off</span>
+            <p>A new type needs policy rules and a workflow, and every new type widens what the model can touch.</p></div>
+        </div>
+
+        <div class="m-group">Same for both versions</div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Can it grant access without approval?</div>
+          <div class="m-cell m-cell--both" role="cell">
+            <span class="tag tag--shared"><i></i>Same for both</span>
+            <p>No. The identity provider re-checks that an approval exists, was approved, came from the policy-resolved approver and matches user, system and level. AI-native never wins by skipping a control.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Waiting for approval</div>
+          <div class="m-cell m-cell--both" role="cell">
+            <span class="tag tag--shared"><i></i>Same for both</span>
+            <p>A person still has to approve, so the manager’s answer sets the pace in either approach.</p></div>
+        </div>
+
+        <div class="m-row" role="row">
+          <div class="m-q" role="rowheader">Side topic: fewer approvals</div>
+          <div class="m-cell m-cell--both" role="cell">
+            <span class="tag tag--shared"><i></i>Policy decision</span>
+            <p>The company could put it in the policy: grant the standard access at onboarding, or approve automatically for specific departments. That removes the longest wait in both versions, and it is a policy choice, not an architecture one.</p></div>
+        </div>
+      </div>
+
+      <h3 class="sub">Model calls per scenario</h3>
+      <p class="lede">Cost in a model-based system is roughly the number of calls times the tokens in each call. These counts come from the scenario steps, not from recorded runs. They are expected, not measured.</p>
+      <div class="calls" id="calls" role="table" aria-label="Model calls per scenario"></div>
+      <p class="calls-note"><b>Per call:</b> AI automation makes no model calls: the form and workflow are plain automation. The AI-native calls each carry the instructions, the tool list and the policy data, so each one is large. Expect AI-native to cost more in model tokens on every request. Where it saves is people’s time and wasted approvals. Real numbers will come from the logs of the recorded runs.</p>
+    </div>
+  </section>
+
+  <!-- ================= GUARDRAILS ================= -->
+  <section class="section" id="guardrails">
+    <div class="wrap">
+      <h2>The model proposes. Code decides.</h2>
+      <p class="lede">The comparison is only fair if both versions sit on the same ground. They share the controls and differ in how the work is chosen.</p>
+
+      <div class="split">
+        <div class="panel">
+          <h3>Shared by both versions</h3>
+          <ul>
+            <li><b>Policy.</b> One approval matrix and one approver resolution.</li>
+            <li><b>Enforcement.</b> The identity provider checks the approval before any grant.</li>
+            <li><b>Audit.</b> An append-only log with a correlation ID per run.</li>
+            <li><b>Approval.</b> The same email with Approve and Reject buttons.</li>
+            <li><b>Inputs.</b> The same request, seed and approver in every scenario.</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>What differs</h3>
+          <ul>
+            <li><b>What decides the work.</b> The form’s template and workflow, or policy, state and desired outcome.</li>
+            <li><b>Where required information lives.</b> The form’s template, or the policy defaults.</li>
+            <li><b>Who keeps it current.</b> The support team updates forms and templates by hand when the policy changes, or the agent reads the policy directly.</li>
+            <li><b>How Alex is told.</b> Notifications in fixed wording, or messages in the chat.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="sub">Every call in AI-native passes four gates</h3>
+      <div class="gates">
+        <div class="gate gate--model"><h4>Model</h4><p>Reads, checks and asks. Each tick is a fresh call seeded with the saved request, never a transcript.</p></div>
+        <div class="gate"><h4>Orchestrator</h4><p>Validates and audits every call and sets status from results, never from model text. It hands a clean request to the workflow.</p></div>
+        <div class="gate"><h4>Tools</h4><p>A few narrow, typed tools. Policy arrives as data, never as raw Confluence text.</p></div>
+        <div class="gate gate--idp"><h4>Identity provider</h4><p>Independently checks the approval before any grant. The same check runs for AI automation.</p></div>
+      </div>
+      <p class="denied">If any gate says no, nothing changes.<span>The model receives a structured error and the attempt is audited as denied.</span></p>
+
+      <h3 class="sub">The model reads and asks. The workflow acts.</h3>
+      <div class="loop">
+        <div class="loop-cell"><h4>Observe</h4><p>Model: what does Alex have, is anything open, is the system healthy?</p><code>get_user_access<br>find_open_requests<br>get_system_status</code></div>
+        <div class="loop-cell"><h4>Decide</h4><p>Model: what does the policy require, and what is still missing?</p><code>get_access_policy<br>get_approval_status</code></div>
+        <div class="loop-cell"><h4>Act</h4><p>Workflow: ask for approval, tell Alex and grant. The model doesn’t choose these.</p><code>request_approval<br>notify_user<br>grant_access</code></div>
+        <div class="loop-cell"><h4>Verify</h4><p>Workflow: test access before saying it’s ready.</p><code>get_user_access</code></div>
+      </div>
+      <p class="loop-foot">The model’s part ends once nothing is missing. The workflow runs until the outcome is verified, it is waiting on a person, or a failure needs intervention. A new message or an approval decision starts the next tick.</p>
+    </div>
+  </section>
+
+  <!-- ================= LIMITS ================= -->
+  <section class="section" id="limits">
+    <div class="wrap">
+      <h2>What this doesn’t show</h2>
+      <ul class="limits">
+        <li><b>That AI-native is cheaper or faster in production.</b><span>Nothing here is measured at production scale.</span></li>
+        <li><b>That an agent loop is reliable across many request types.</b><span>One request type is tested.</span></li>
+        <li><b>That forms and templates are useless.</b><span>Some fields serve audit or compliance needs that aren’t modeled.</span></li>
+        <li><b>That a replayed run represents every live run.</b><span>The demo shows one recorded run per scenario.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="closer">
+    <div class="wrap">
+      <p><span class="a">AI automation: a process, automated.</span> <span class="b">AI-native: designed around an outcome.</span></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>The form system, the policy page, the identity provider and notifications are mocks in demo mode. <span class="sim">Simulated</span></p>
+    <p>Anna Kosareva</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* t (who does the step): human | auto | ai | ai+auto.
+     ai+auto = AI-native tool call: the model chooses it, automation runs and enforces it.
+     flags: noEffect, gap.  phase (AI-native only): Observe | Decide | Act | Verify */
+  /* t (who does the step): human | auto | ai | ai+auto.
+     ai+auto = AI-native tool call: the model chooses it, automation runs it.
+     AI automation is a form plus a fixed workflow, so it has no model steps.
+     phase (AI-native only): Observe | Decide | Ask. After the hand-off the workflow acts on its own. */
+  var S = [
+    {
+      id: "S1", label: "First request",
+      world: "Alex has no Reporting access and no open request.",
+      notice: "No model in AI automation. AI-native asks Alex one question.",
+      A: { steps: [
+        { t: "human", who: "Alex", text: "finds the access form and fills in the system, environment, access level and justification." },
+        { t: "auto", who: "Form", text: "checks the required fields and creates the request from the access request template." },
+        { t: "auto", who: "Workflow", text: "resolves the approver from the matrix (Morgan Lee), emails the approval request and tells Alex it is waiting." },
+        { t: "human", who: "Morgan", text: "clicks Approve in the email." },
+        { t: "auto", who: "Workflow", text: "grants Read, tests it, tells Alex and closes the request." }
+      ], outcome: "Access granted, by the same path every request takes." },
+      B: { steps: [
+        { t: "human", who: "Alex", text: "sends the message." },
+        { t: "ai+auto", phase: "Observe", text: "Checks what Alex has and whether the system is healthy: no Reporting access, no open request, no incident.", tool: "get_user_access, find_open_requests, get_system_status" },
+        { t: "ai+auto", phase: "Decide", text: "Reads the policy as data: defaults are Production and Read, and Morgan Lee must approve. Only the justification is missing.", tool: "get_access_policy", note: "Alex isn’t asked for details the policy already knows." },
+        { t: "ai", phase: "Ask", text: "Asks Alex why he needs the access." },
+        { t: "human", who: "Alex", text: "replies: monthly revenue reports." },
+        { t: "ai", phase: "Decide", text: "Checks again. Nothing is missing, so it hands the request to the workflow." },
+        { t: "auto", who: "Workflow", text: "emails Morgan Lee for approval and tells Alex it is waiting." },
+        { t: "human", who: "Morgan", text: "clicks Approve in the email." },
+        { t: "auto", who: "Workflow", text: "grants Read, tests it and tells Alex it is ready to try." }
+      ], outcome: "Access granted, after the agent worked out the case." }
+    },
+    {
+      id: "S2", label: "Already has access",
+      world: "Alex already has Reporting Read.",
+      notice: "AI-native reads it as a technical issue. AI automation runs the full access cycle for access Alex already has.",
+      A: { steps: [
+        { t: "human", who: "Alex", text: "assumes he needs access, finds the form and fills it in." },
+        { t: "auto", who: "Form", text: "checks the fields and creates the request.", note: "Nothing in the form looks up existing access." },
+        { t: "auto", who: "Workflow", text: "resolves Morgan Lee and emails the approval request.", noEffect: true },
+        { t: "human", who: "Morgan", text: "clicks Approve in the email.", noEffect: true },
+        { t: "auto", who: "Workflow", text: "grants Read and closes the request.", noEffect: true, note: "Already granted. The identity provider treats the repeat as a no-op." }
+      ], outcome: "Request closed. Nothing in the flow told Alex he already had access.", caution: true },
+      B: { steps: [
+        { t: "human", who: "Alex", text: "sends the message." },
+        { t: "ai+auto", phase: "Observe", text: "Wonders if it is an access problem and checks access and system health. Alex already has Reporting Read and the system is healthy.", tool: "get_user_access, get_system_status" },
+        { t: "ai", phase: "Decide", text: "Concludes it isn’t an access problem, so it must be a technical issue.", note: "No approval is requested and nothing is granted." },
+        { t: "ai+auto", phase: "Ask", text: "Tells Alex his access is fine and asks what he sees when the page won’t open.", tool: "notify_user" }
+      ], outcome: "Read as a technical issue. Nothing requested, nothing granted." }
+    },
+    {
+      id: "S3", label: "Request already pending",
+      world: "An approval for Alex and Reporting has waited on Morgan since yesterday.",
+      notice: "AI automation creates a second request for the same need. AI-native finds the first.",
+      A: { steps: [
+        { t: "human", who: "Alex", text: "finds the form and fills it in again." },
+        { t: "auto", who: "Form", text: "creates a second request. The first is still open.", noEffect: true, note: "State is kept per request. Nothing compares requests." },
+        { t: "auto", who: "Workflow", text: "resolves Morgan Lee and emails a second approval request.", noEffect: true }
+      ], outcome: "Two requests and two approval emails wait on Morgan for one need.", caution: true },
+      B: { steps: [
+        { t: "human", who: "Alex", text: "sends the request again." },
+        { t: "ai+auto", phase: "Observe", text: "Finds no access yet.", tool: "get_user_access" },
+        { t: "ai+auto", phase: "Observe", text: "Finds yesterday’s open request, waiting on Morgan Lee.", tool: "find_open_requests" },
+        { t: "ai+auto", phase: "Decide", text: "Confirms Morgan hasn’t decided.", tool: "get_approval_status" },
+        { t: "ai+auto", phase: "Ask", text: "Tells Alex it is still with Morgan Lee. No second request is created.", tool: "notify_user", note: "Approval requests are idempotent per request and approver, so a retry couldn’t duplicate it either." }
+      ], outcome: "One request, one approval, and Alex is informed." }
+    },
+    {
+      id: "S4", label: "Morgan rejects",
+      world: "Alex has no access. Morgan declines the approval.",
+      notice: "Neither grants. Both tell Alex with fixed wording.",
+      A: { steps: [
+        { t: "human", who: "Alex", text: "finds the access form and fills it in." },
+        { t: "auto", who: "Form", text: "checks the required fields and creates the request." },
+        { t: "auto", who: "Workflow", text: "resolves Morgan Lee, emails the approval request and tells Alex it is waiting." },
+        { t: "human", who: "Morgan", text: "clicks Reject in the email." },
+        { t: "auto", who: "Workflow", text: "sets the request to rejected, so nothing is granted, tells Alex and closes it." }
+      ], outcome: "No grant. Alex is told and the request is closed as rejected." },
+      B: { steps: [
+        { t: "human", who: "Alex", text: "sends the message." },
+        { t: "ai+auto", phase: "Observe", text: "Checks what Alex has and whether the system is healthy: no access, no open request, no incident.", tool: "get_user_access, find_open_requests, get_system_status" },
+        { t: "ai+auto", phase: "Decide", text: "Reads the policy: Morgan Lee must approve. Only the justification is missing.", tool: "get_access_policy" },
+        { t: "ai", phase: "Ask", text: "Asks Alex why he needs the access." },
+        { t: "human", who: "Alex", text: "replies: monthly revenue reports." },
+        { t: "ai", phase: "Decide", text: "Checks again. Nothing is missing, so it hands the request to the workflow." },
+        { t: "auto", who: "Workflow", text: "emails Morgan Lee for approval and tells Alex it is waiting." },
+        { t: "human", who: "Morgan", text: "clicks Reject in the email." },
+        { t: "auto", who: "Workflow", text: "sets the status to rejected and tells Alex Morgan Lee declined. The identity provider would refuse any grant without an approved approval." }
+      ], outcome: "No grant. Alex is told why." }
+    },
+    {
+      id: "S5", label: "Production issue",
+      world: "The Reporting system has a production issue. It is down for everyone.",
+      notice: "AI-native spots the outage and says so. AI automation starts an access request that can’t fix it.",
+      A: { steps: [
+        { t: "human", who: "Alex", text: "assumes he needs access, finds the form and fills it in." },
+        { t: "auto", who: "Form", text: "checks the fields and creates the request.", note: "Nothing in the form looks at the system’s health." },
+        { t: "auto", who: "Workflow", text: "resolves Morgan Lee and emails the approval request.", noEffect: true },
+        { t: "human", who: "Morgan", text: "clicks Approve in the email.", noEffect: true },
+        { t: "auto", who: "Workflow", text: "grants Read and closes the request.", noEffect: true, note: "The page still won’t open. The system is down." }
+      ], outcome: "Request closed, page still down. Nothing in the flow told Alex about the outage.", caution: true },
+      B: { steps: [
+        { t: "human", who: "Alex", text: "sends the message." },
+        { t: "ai+auto", phase: "Observe", text: "Wonders if it is an access problem and checks access, open requests and system health. Finds a production issue on Reporting.", tool: "get_user_access, find_open_requests, get_system_status" },
+        { t: "ai", phase: "Decide", text: "Concludes the page is down for everyone, so access isn’t the problem.", note: "No approval is requested and nothing is granted." },
+        { t: "ai+auto", phase: "Ask", text: "Tells Alex about the known outage and where to follow it.", tool: "notify_user" }
+      ], outcome: "Alex is told about the outage. No request, no approval, no grant." }
+    }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* Model calls per scenario, counted from the scenario data above (expected, not measured). */
+  (function buildCalls() {
+    var host = $("calls");
+    if (!host) return;
+    var NOTES = {
+      S1: "AI automation needs no model. AI-native reads, checks and asks, so it makes more calls.",
+      S2: "AI-native stops after checking. AI automation runs the whole cycle, including an approval that changes nothing.",
+      S3: "AI-native finds the open request. AI automation creates a second request and a second approval.",
+      S4: "Neither grants. Both tell Alex in fixed wording.",
+      S5: "AI-native spots the outage. AI automation runs a full access cycle that can’t fix it."
+    };
+    var hasAI = function (s) { return s.t.split("+").indexOf("ai") > -1; };
+    var wasted = function (s) { return !!s.noEffect; };
+    var alex = function (s) { return s.t === "human" && s.who === "Alex"; };
+    var head = el("div", "c-head");
+    ["Scenario", "Model calls", "Steps that change nothing", "Alex acts", "What it shows"].forEach(function (h) {
+      head.appendChild(el("span", null, h));
+    });
+    host.appendChild(head);
+    S.forEach(function (sc) {
+      var row = el("div", "c-row");
+      row.appendChild(el("div", "c-name", sc.id + " " + sc.label));
+      [["Model calls", hasAI], ["Steps that change nothing", wasted], ["Alex acts", alex]].forEach(function (m) {
+        var cell = el("div", "c-cell");
+        cell.setAttribute("data-label", m[0]);
+        [["ca", "AI automation", sc.A], ["cb", "AI-native", sc.B]].forEach(function (v) {
+          var sp = el("span", v[0]);
+          sp.appendChild(document.createTextNode(v[1] + " "));
+          sp.appendChild(el("b", null, String(v[2].steps.filter(m[1]).length)));
+          cell.appendChild(sp);
+        });
+        row.appendChild(cell);
+      });
+      row.appendChild(el("div", "c-note", NOTES[sc.id]));
+      host.appendChild(row);
+    });
+  })();
+
+  /* Counts under each block schema, read from the blocks themselves. */
+  Array.prototype.forEach.call(document.querySelectorAll(".hero-count"), function (host) {
+    var lane = document.querySelector(".fork-lane--" + host.getAttribute("data-count"));
+    if (!lane) return;
+    var n = { human: 0, auto: 0, ai: 0, alex: 0 };
+    Array.prototype.forEach.call(lane.querySelectorAll(".b2"), function (b) {
+      if (b.closest("[data-path]")) return; // the rejected branch is not part of this count
+      var badge = b.querySelector(".badge");
+      var label = badge ? (badge.getAttribute("aria-label") || "").toLowerCase() : "";
+      if (label === "human") n.human++;
+      else if (label === "automation") n.auto++;
+      else if (label === "ai") n.ai++;
+      else if (label.indexOf("ai chooses") === 0) { n.ai++; n.auto++; }
+      var title = b.querySelector("b");
+      if (title && /^(Alex|He) /.test(title.textContent)) n.alex++;
+    });
+    var dl = host.querySelector(".stats");
+    [["Human steps", n.human], ["Automation steps", n.auto], ["AI steps", n.ai], ["Alex acts", n.alex]].forEach(function (kv) {
+      var d = el("div", "stat");
+      d.appendChild(el("dt", null, kv[0]));
+      d.appendChild(el("dd", null, String(kv[1])));
+      dl.appendChild(d);
+    });
+  });
+
+  /* Play button for the video at the top: play, pause on click, replay at the end. */
+  var player = document.querySelector(".player");
+  if (player) {
+    var vid = player.querySelector("video");
+    var btn = player.querySelector(".play");
+    var sync = function () {
+      player.classList.toggle("is-playing", !vid.paused && !vid.ended);
+      player.classList.toggle("is-ended", vid.ended);
+      btn.setAttribute("aria-label", (vid.ended ? "Replay" : "Play") + " AI automation and AI-native, step by step");
+    };
+    btn.addEventListener("click", function () {
+      if (vid.ended) vid.currentTime = 0;
+      var p = vid.play();
+      if (p && p.catch) p.catch(function () {});
+    });
+    vid.addEventListener("click", function () { if (!vid.paused) vid.pause(); });
+    ["play", "playing", "pause", "ended"].forEach(function (ev) { vid.addEventListener(ev, sync); });
+  }
+
+})();
+</script>
+</body>
+</html>
